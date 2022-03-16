@@ -29,7 +29,7 @@ func incrementCounter(w http.ResponseWriter, r *http.Request) {
 func main() {
 
 	/* General handler */
-	http.HandleFunc("/", echo)
+	http.Handle("/", http.FileServer(http.Dir("./html")))
 
 	/* Handler for /hi */
 	http.HandleFunc("/hi", func(w http.ResponseWriter, r *http.Request) {
