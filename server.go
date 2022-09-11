@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"html"
 	"log"
@@ -9,7 +10,7 @@ import (
 	"strconv"
 	"sync"
 
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 /* Globals */
@@ -37,6 +38,7 @@ type Image struct {
 	URL  string `json:"URL"`
 }
 
+/* Scan out description of an image and return it */
 func scanDescription(row *sql.Row) string {
 	var img Image
 
@@ -62,18 +64,33 @@ func main() {
 	http.HandleFunc("/increment", incrementCounter)
 
 	/* Open a database connection */
-	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/Image_gallery")
-
-	/* Print error */
+	db, err := sql.Open("sqlite3", "./images.db")
 	if err != nil {
 		panic(err.Error())
 	}
 
-	/* Extract first image and print description */
+	/* Return data in database as json */
 	http.HandleFunc("/sql", func(w http.ResponseWriter, r *http.Request) {
-		row := db.QueryRow("SELECT ID, name, description, URL FROM image WHERE ID=?", 1)
+		/* Run query */
+		rows, err := db.Query("SELECT * FROM images")
+		if err != nil {
+			panic(err.Error())
+		}
 
-		fmt.Fprintf(w, scanDescription(row))
+		/* Provide correct header */
+		w.Header().Set("Content-Type", "application/json")
+
+		/* Extract rows and write to HTTP response */
+		var img Image
+
+		for rows.Next() {
+			rows.Scan(&img.ID, &img.Name, &img.Desc, &img.URL)
+			obj, err := json.Marshal(img)
+			if err != nil {
+				panic(err.Error())
+			}
+			w.Write(obj)
+		}
 	})
 
 	/* Close database */
