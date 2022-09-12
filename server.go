@@ -81,16 +81,48 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 
 		/* Extract rows and write to HTTP response */
-		var img Image
+		var img []Image
 
+		var i int = 0
 		for rows.Next() {
-			rows.Scan(&img.ID, &img.Name, &img.Desc, &img.URL)
-			obj, err := json.Marshal(img)
+			var tmp Image
+			img = append(img, tmp)
+			rows.Scan(&img[i].ID, &img[i].Name, &img[i].Desc, &img[i].URL)
+			i++
+		}
+		/* Convert to json */
+		obj, err := json.Marshal(img)
+		if err != nil {
+			panic(err.Error())
+		}
+		/* Write to response */
+		w.Write(obj)
+	})
+
+	/* Handle adding image to database */
+	http.HandleFunc("/addimage", func(w http.ResponseWriter, r *http.Request) {
+		/* Handle GET */
+		if r.Method == "GET" {
+			http.ServeFile(w, r, "html/addimage.html")
+		} else if r.Method == "POST" {
+			/* Parse form input */
+			if err := r.ParseForm(); err != nil {
+				fmt.Fprintf(w, "Unable to parse form input: %v", err)
+			}
+			name := r.FormValue("Name")
+			desc := r.FormValue("Desc")
+			url := r.FormValue("URL")
+
+			/* Stage SQL insertion */
+			stmt, err := db.Prepare(`INSERT INTO images (name, desc, URL) 
+									VALUES (?, ?, ?)`)
 			if err != nil {
 				panic(err.Error())
 			}
-			w.Write(obj)
+			/* Execute insertion */
+			stmt.Exec(name, desc, url)
 		}
+
 	})
 
 	/* Close database */
