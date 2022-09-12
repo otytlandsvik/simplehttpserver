@@ -16,6 +16,7 @@ import (
 /* Globals */
 var counter int
 var mutex = &sync.Mutex{}
+var imgPath = "images/"
 
 /* echo path */
 func echo(w http.ResponseWriter, r *http.Request) {
@@ -121,6 +122,9 @@ func main() {
 			}
 			/* Execute insertion */
 			stmt.Exec(name, desc, url)
+
+			/* Serve form for another insert */
+			http.ServeFile(w, r, "html/addimage.html")
 		}
 
 	})
